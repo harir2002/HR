@@ -13,21 +13,61 @@ class APIKeyManager:
     """Manages multiple API keys with automatic rotation on rate limit"""
     
     def __init__(self):
-        # Load all API keys
+        # Load all API keys from Streamlit secrets or environment
         self.api_keys = []
-        for i in range(1, 10):  # Support up to 9 keys
-            key = os.getenv(f"GROQ_API_KEY_{i}")
-            if key:
-                self.api_keys.append(key)
         
+        # Try Streamlit secrets first (for cloud deployment)
+        try:
+            import streamlit as st
+            
+            if hasattr(st, 'secrets') and len(st.secrets) > 0:
+                logger.info("🔍 Checking Streamlit secrets for API keys...")
+                
+                # Try direct access to GROQ_API_KEY_1, GROQ_API_KEY_2, etc.
+                for i in range(1, 10):
+                    key_name = f"GROQ_API_KEY_{i}"
+                    try:
+                        key = st.secrets[key_name]
+                        if key and key != "your_first_api_key_here":
+                            self.api_keys.append(key)
+                            logger.info(f"✅ Loaded {key_name} from Streamlit secrets")
+                    except KeyError:
+                        pass  # Key doesn't exist
+                
+                if not self.api_keys:
+                    logger.warning("⚠️ No API keys found in Streamlit secrets")
+            else:
+                logger.info("Streamlit secrets not available, using environment variables")
+                
+        except ImportError:
+            logger.info("Streamlit not imported, using environment variables")
+        except Exception as e:
+            logger.warning(f"Error accessing Streamlit secrets: {e}")
+        
+        # Fallback to environment variables (for local development)
         if not self.api_keys:
-            # Fallback to single key
+            logger.info("🔍 Checking environment variables for API keys...")
+            for i in range(1, 10):
+                key = os.getenv(f"GROQ_API_KEY_{i}")
+                if key:
+                    self.api_keys.append(key)
+                    logger.info(f"✅ Loaded API key #{i} from environment")
+        
+        # Last resort: single key
+        if not self.api_keys:
             single_key = os.getenv("GROQ_API_KEY")
             if single_key:
                 self.api_keys.append(single_key)
+                logger.info("✅ Loaded single API key from GROQ_API_KEY")
         
         self.current_index = 0
-        logger.info(f"✅ Loaded {len(self.api_keys)} API key(s) for rotation")
+        
+        if self.api_keys:
+            logger.info(f"🎉 Successfully loaded {len(self.api_keys)} API key(s) for rotation")
+        else:
+            logger.error("❌ NO API KEYS FOUND!")
+            logger.error("For Streamlit Cloud: Add GROQ_API_KEY_1, GROQ_API_KEY_2, GROQ_API_KEY_3 in Settings → Secrets")
+            logger.error("For local: Add them to .env file")
     
     def get_current_key(self):
         """Get the current API key"""
