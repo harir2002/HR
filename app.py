@@ -34,8 +34,6 @@ load_dotenv()
 # Show warnings for missing libraries
 if not HAS_PYPDF2 and not HAS_PDFPLUMBER:
     st.error("❌ No PDF library installed! Install with: pip install PyPDF2")
-if not HAS_DOCX:
-    st.warning("⚠️ python-docx not installed. DOCX files won't work. Install with: pip install python-docx")
 
 # Configure logging
 logging.basicConfig(
